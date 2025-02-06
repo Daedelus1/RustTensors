@@ -1,0 +1,11 @@
+[package]
+name = "tensors"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ethan Stewart <daedelusstormbow@gmail.com>"]
+license = "MIT"
+description = "A library to use n-dimensional arrays."
+
+
+[dependencies]
+proptest = "1.6.0"
