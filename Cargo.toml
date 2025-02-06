@@ -5,7 +5,8 @@ edition = "2021"
 authors = ["Ethan Stewart <daedelusstormbow@gmail.com>"]
 license = "MIT"
 description = "A library to use n-dimensional arrays."
-
+repository = "https://github.com/Daedelus1/RustTensors"
+readme = "README.md"
 
 [dependencies]
 proptest = "1.6.0"
