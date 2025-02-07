@@ -1,5 +1,4 @@
 use crate::addressable::Addressable;
-use std::cmp::Ordering;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct AddressBound<A: Addressable> {
@@ -9,8 +8,20 @@ pub struct AddressBound<A: Addressable> {
 
 impl<A: Addressable> AddressBound<A> {
     pub fn contains_address(&self, address: &A) -> bool {
-        self.smallest_possible_position.cmp(&address) != Ordering::Greater
-            && self.largest_possible_position.cmp(&address) != Ordering::Less
+        for d in 0..A::get_dimension_count() {
+            if address.get_item_at_dimension_index(d)
+                < self
+                    .smallest_possible_position
+                    .get_item_at_dimension_index(d)
+                || address.get_item_at_dimension_index(d)
+                    > self
+                        .largest_possible_position
+                        .get_item_at_dimension_index(d)
+            {
+                return false;
+            }
+        }
+        true
     }
 
     pub fn iter(&self) -> AddressIterator<A> {
@@ -148,7 +159,29 @@ mod tests {
                 assert_eq!(bounds.index_address(&address).unwrap(), ((address.y - y1) * (x2-x1 + 1) + (address.x - x1)) as usize);
                 assert_eq!(bounds.get_address_from_index(index).expect("Index out of bounds"), address);
             });
-
+        }
+        #[test]
+        fn address_iteration_test(x1 in 0i64..1000, y1 in 0i64..1000, x2 in 0i64..1000, y2 in 0i64..1000) {
+            if x2 < x1 || y2 < y1 {
+                return Ok(());
+            }
+            let bounds = AddressBound {
+                smallest_possible_position: MatrixAddress { x: x1, y: y1 },
+                largest_possible_position: MatrixAddress { x: x2, y: y2 },
+            };
+            bounds.iter().for_each(|address| assert!(bounds.contains_address(&address)));
+            assert_eq!((x2 - x1 + 1) * (y2 - y1 + 1), bounds.iter().collect::<Vec<_>>().len().try_into().unwrap())
+        }
+        #[test]
+        fn contains_test(x1 in 0i64..1000, y1 in 0i64..1000, x2 in 0i64..1000, y2 in 0i64..1000, x3 in 0i64..1000, y3 in 0i64..1000) {
+           if x2 < x1 || y2 < y1 {
+                return Ok(());
+            }
+            let bounds = AddressBound {
+                smallest_possible_position: MatrixAddress { x: x1, y: y1 },
+                largest_possible_position: MatrixAddress { x: x2, y: y2 },
+            };
+            assert_eq!(bounds.contains_address(&MatrixAddress{x: x3,y: y3}), x3 >= x1 && x3 <= x2 && y3 >= y1 && y3 <= y2);
         }
     }
 }
