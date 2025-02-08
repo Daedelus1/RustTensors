@@ -53,7 +53,7 @@ impl<T> Tensor<T, MatrixAddress> for Matrix<T> {
 }
 
 impl<T> Matrix<T> {
-    fn to_display_string<T1: Display, F: Fn(&T) -> T1>(
+    pub fn to_display_string<T1: Display, F: Fn(&T) -> T1>(
         &self,
         display_func: F,
         row_delimiter: &str,

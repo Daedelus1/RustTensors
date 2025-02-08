@@ -1,6 +1,6 @@
 [package]
 name = "rust-tensors"
-version = "0.1.1"
+version = "0.1.3"
 edition = "2021"
 authors = ["Ethan Stewart <daedelusstormbow@gmail.com>"]
 license = "MIT"
