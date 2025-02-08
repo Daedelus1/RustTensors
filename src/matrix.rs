@@ -1,9 +1,9 @@
-use std::fmt::{Display, Formatter};
-use std::io::Error;
-use std::io::ErrorKind::InvalidInput;
 use crate::address_bound::AddressBound;
 use crate::matrix_address::MatrixAddress;
 use crate::tensor::Tensor;
+use std::fmt::{Display, Formatter};
+use std::io::Error;
+use std::io::ErrorKind::InvalidInput;
 
 /// A tensor of two dimensions accessed using MatrixAddress.
 #[derive(Clone, Debug, PartialEq)]
@@ -52,21 +52,36 @@ impl<T> Tensor<T, MatrixAddress> for Matrix<T> {
     }
 }
 
-impl<T: Display> Display for Matrix<T> {
-    fn fmt<'a>(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl<T> Matrix<T> {
+    fn to_display_string<T1: Display, F: Fn(&T) -> T1>(
+        &self,
+        display_func: F,
+        row_delimiter: &str,
+        column_delimiter: &str,
+    ) -> String {
+        self.address_iterator()
+            .enumerate()
+            .map(|(i, address)| {
+                format!(
+                    "{}{}",
+                    display_func(self.get(&address).unwrap()),
+                    if (i as i64 + 1) % (self.bounds.largest_possible_position.x + 1) == 0 {
+                        row_delimiter
+                    } else {
+                        column_delimiter
+                    }
+                )
+            })
+            .fold("".to_string(), |a: String, b: String| a + &b)
+    }
+}
+
+impl<'a, T: Display + 'a> Display for Matrix<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
             "{}",
-            self.address_iterator()
-                .enumerate()
-                .map(|(i, address)| {
-                    let mut delimiter = " ";
-                    if (i as i64 + 1) % (self.bounds.largest_possible_position.x + 1) == 0 {
-                        delimiter = "\n";
-                    }
-                    format!("{}{}", self.get(&address).unwrap(), delimiter)
-                })
-                .fold("".to_string(), |a: String, b: String| { a + &b },)
+            self.to_display_string(|x: &T| x.to_string(), " ", "\n")
         )
     }
 }
