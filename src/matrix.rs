@@ -53,7 +53,7 @@ impl<T> Tensor<T, MatrixAddress> for Matrix<T> {
 }
 
 impl<T> Matrix<T> {
-    fn to_display_string<T1: Display, F: Fn(&T) -> T1>(
+    pub fn to_display_string<T1: Display, F: Fn(&T) -> T1>(
         &self,
         display_func: F,
         row_delimiter: &str,
@@ -66,9 +66,9 @@ impl<T> Matrix<T> {
                     "{}{}",
                     display_func(self.get(&address).unwrap()),
                     if (i as i64 + 1) % (self.bounds.largest_possible_position.x + 1) == 0 {
-                        row_delimiter
-                    } else {
                         column_delimiter
+                    } else {
+                        row_delimiter
                     }
                 )
             })
