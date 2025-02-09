@@ -75,7 +75,7 @@ mod tests {
             a2.difference(&a1);
             a1.distance(&a2);
             a2.distance(&a1);
-            a1.scale(x2);
+            a1.scale(x2 as f64);
         }
 
         #[test]
@@ -92,7 +92,7 @@ mod tests {
             let a2 = MatrixAddress{x: x2,y: y2};
             prop_assert_eq!(a1.add(&a2), MatrixAddress{x: x1 + x2,y: y1 + y2});
             prop_assert_eq!(a1.subtract(&a2), MatrixAddress{x: x1 - x2,y: y1 - y2});
-            prop_assert_eq!(a1.scale(x2), MatrixAddress{x: x1 * x2,y: y1 * x2});
+            prop_assert_eq!(a1.scale(x2 as f64), MatrixAddress{x: x1 * x2,y: y1 * x2});
             prop_assert_eq!(a1.distance(&a2), (((x1 - x2).pow(2) as f64) + ((y1 - y2).pow(2) as f64)).sqrt());
         }
     }

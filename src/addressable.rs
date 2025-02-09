@@ -48,12 +48,12 @@ pub trait Addressable: PartialEq + Ord + Sized + Copy {
             .unwrap() as f64)
             .sqrt()
     }
-    fn scale(&self, scalar: i64) -> Self {
+    fn scale(&self, scalar: f64) -> Self {
         Self::new_from_value_vec(
             (0..Self::get_dimension_count())
                 .into_iter()
                 .map(|dimension_index: u32| {
-                    self.get_item_at_dimension_index(dimension_index) * scalar
+                    ((*self.get_item_at_dimension_index(dimension_index) as f64) * scalar) as i64
                 })
                 .collect(),
         )
