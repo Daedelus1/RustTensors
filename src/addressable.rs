@@ -1,4 +1,6 @@
-pub trait Addressable: PartialEq + Ord + Sized + Copy {
+use std::hash::Hash;
+
+pub trait Addressable: PartialEq + Ord + Sized + Copy + Hash {
     fn get_dimension_count() -> u32;
     fn new_from_value_vec(values: Vec<i64>) -> Self;
     fn get_item_at_dimension_index(&self, dimension_index: u32) -> &i64;

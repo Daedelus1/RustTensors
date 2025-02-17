@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use crate::addressable::Addressable;
 
-#[derive(Eq, PartialEq, Ord, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, Ord, Copy, Clone, Debug, Hash)]
 pub struct MatrixAddress {
     pub x: i64,
     pub y: i64,
