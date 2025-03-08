@@ -9,5 +9,5 @@ pub mod prelude {
     pub use crate::addressable::Addressable;
     pub use crate::matrix::Matrix;
     pub use crate::matrix_address::MatrixAddress;
-    pub use crate::tensor::Tensor; 
+    pub use crate::tensor::Tensor;
 }

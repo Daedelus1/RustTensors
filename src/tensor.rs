@@ -1,6 +1,6 @@
-use std::io::Error;
 use crate::address_bound::{AddressBound, AddressIterator};
 use crate::addressable::Addressable;
+use std::io::Error;
 
 /// The framework used to make a tensor or an N dimensional array
 pub trait Tensor<T, A: Addressable> {

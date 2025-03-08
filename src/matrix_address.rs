@@ -1,6 +1,6 @@
+use crate::addressable::Addressable;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
-use crate::addressable::Addressable;
 
 #[derive(Eq, PartialEq, Ord, Copy, Clone, Debug, Hash)]
 pub struct MatrixAddress {
@@ -58,9 +58,9 @@ impl MatrixAddress {
 
 #[cfg(test)]
 mod tests {
-    use proptest::{prop_assert_eq, proptest};
     use crate::addressable::Addressable;
     use crate::matrix_address::MatrixAddress;
+    use proptest::{prop_assert_eq, proptest};
 
     proptest! {
         #[test]
