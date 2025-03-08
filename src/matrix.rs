@@ -1,9 +1,11 @@
 use crate::address_bound::AddressBound;
 use crate::matrix_address::MatrixAddress;
 use crate::tensor::Tensor;
+use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::io::Error;
+use std::io::ErrorKind;
 use std::io::ErrorKind::InvalidInput;
+use std::str::FromStr;
 
 /// A tensor of two dimensions accessed using MatrixAddress.
 #[derive(Clone, Debug, PartialEq)]
@@ -36,9 +38,9 @@ impl<T> Tensor<T, MatrixAddress> for Matrix<T> {
             .get_mut(self.bounds.index_address(address).unwrap())
     }
 
-    fn set(&mut self, address: &MatrixAddress, value: T) -> Result<(), Error> {
+    fn set(&mut self, address: &MatrixAddress, value: T) -> Result<(), std::io::Error> {
         if !self.bounds.contains_address(address) {
-            return Err(Error::new(
+            return Err(std::io::Error::new(
                 InvalidInput,
                 format!("The following address is out of bounds: {address}"),
             ));
@@ -74,6 +76,50 @@ impl<T> Matrix<T> {
             })
             .fold("".to_string(), |a: String, b: String| a + &b)
     }
+
+    pub fn parse_matrix<F>(
+        data_str: &str,
+        column_delimiter: &str,
+        row_delimiter: &str,
+        str_to_t_converter: F,
+    ) -> Result<Matrix<T>, std::io::Error>
+    where
+        F: Fn(&str) -> T,
+    {
+        let values: Vec<Vec<&str>> = data_str
+            .split(row_delimiter)
+            .map(|row| row.split(column_delimiter).collect())
+            .collect();
+        if values
+            .iter()
+            .skip(1)
+            .any(|row| row.len() != values.get(0).unwrap().len())
+        {
+            return Err(std::io::Error::new(
+                ErrorKind::InvalidData,
+                "Row Lengths are not constant",
+            ));
+        }
+        let height = values.len();
+        let width = values.get(0).unwrap().len();
+        let matrix_bounds = AddressBound {
+            smallest_possible_position: MatrixAddress { x: 0, y: 0 },
+            largest_possible_position: MatrixAddress {
+                x: (width - 1) as i64,
+                y: (height - 1) as i64,
+            },
+        };
+
+        Ok(Matrix::new(matrix_bounds, |address| {
+            str_to_t_converter(
+                values
+                    .get(address.y as usize)
+                    .unwrap()
+                    .get(address.x as usize)
+                    .unwrap(),
+            )
+        }))
+    }
 }
 
 impl<'a, T: Display + 'a> Display for Matrix<T> {
@@ -92,22 +138,38 @@ mod tests {
     use crate::matrix::Matrix;
     use crate::matrix_address::MatrixAddress;
     use crate::tensor::Tensor;
+    use proptest::num::usize;
+    use std::str::FromStr;
 
     #[test]
     fn display_test() {
         let bound = AddressBound::new(MatrixAddress { x: 0, y: 0 }, MatrixAddress { x: 10, y: 10 });
         assert_eq!(
-                "0 1 2 3 4 5 6 0 1 2 3\n4 5 6 0 1 2 3 4 5 6 0\n1 2 3 4 5 6 0 1 2 3 4\n5 6 0 1 2 3 4 5 6 0 1\n2 3 4 5 6 0 1 2 3 4 5\n6 0 1 2 3 4 5 6 0 1 2\n3 4 5 6 0 1 2 3 4 5 6\n0 1 2 3 4 5 6 0 1 2 3\n4 5 6 0 1 2 3 4 5 6 0\n1 2 3 4 5 6 0 1 2 3 4\n5 6 0 1 2 3 4 5 6 0 1\n",
-                format!(
-                    "{}",
-                    Matrix::new(bound.clone(), |address: MatrixAddress| bound
-                        .index_address(&address)
-                        .unwrap()
-                        % 7)
-                )
+            "0 1 2 3 4 5 6 0 1 2 3\n4 5 6 0 1 2 3 4 5 6 0\n1 2 3 4 5 6 0 1 2 3 4\n5 6 0 1 2 3 4 5 6 0 1\n2 3 4 5 6 0 1 2 3 4 5\n6 0 1 2 3 4 5 6 0 1 2\n3 4 5 6 0 1 2 3 4 5 6\n0 1 2 3 4 5 6 0 1 2 3\n4 5 6 0 1 2 3 4 5 6 0\n1 2 3 4 5 6 0 1 2 3 4\n5 6 0 1 2 3 4 5 6 0 1\n",
+            format!(
+                "{}",
+                Matrix::new(bound.clone(), |address: MatrixAddress| bound
+                    .index_address(&address)
+                    .unwrap()
+                    % 7)
             )
+        )
     }
 
+    #[test]
+    fn parse_test() {
+        let data_str = "0,1,2,3,4,5,6,0,1,2,3|4,5,6,0,1,2,3,4,5,6,0|1,2,3,4,5,6,0,1,2,3,4|5,6,0,1,2,3,4,5,6,0,1|2,3,4,5,6,0,1,2,3,4,5|6,0,1,2,3,4,5,6,0,1,2|3,4,5,6,0,1,2,3,4,5,6|0,1,2,3,4,5,6,0,1,2,3|4,5,6,0,1,2,3,4,5,6,0|1,2,3,4,5,6,0,1,2,3,4|5,6,0,1,2,3,4,5,6,0,1";
+        let bound = AddressBound::new(MatrixAddress { x: 0, y: 0 }, MatrixAddress { x: 10, y: 10 });
+        assert_eq!(
+            Matrix::new(bound.clone(), |address: MatrixAddress| bound
+                .index_address(&address)
+                .unwrap()
+                % 7),
+            Matrix::parse_matrix(data_str, ",", "|", |string| usize::from_str(string)
+                .expect(""))
+            .expect("")
+        );
+    }
     #[test]
     fn get_test() {
         let bound = AddressBound {
