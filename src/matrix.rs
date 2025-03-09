@@ -1,11 +1,9 @@
 use crate::address_bound::AddressBound;
 use crate::matrix_address::MatrixAddress;
 use crate::tensor::Tensor;
-use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io::ErrorKind;
 use std::io::ErrorKind::InvalidInput;
-use std::str::FromStr;
 
 /// A tensor of two dimensions accessed using MatrixAddress.
 #[derive(Clone, Debug, PartialEq)]
@@ -88,7 +86,8 @@ impl<T> Matrix<T> {
     {
         let values: Vec<Vec<&str>> = data_str
             .split(row_delimiter)
-            .map(|row| row.split(column_delimiter).collect())
+            .map(|row| row.split(column_delimiter).filter(|string| *string != "").collect())
+            .filter(|row: &Vec<&str>| row.len() != 0)
             .collect();
         if values
             .iter()
