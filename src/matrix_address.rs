@@ -41,6 +41,14 @@ impl Addressable for MatrixAddress {
             _ => panic!("Unexpected Dimension Index Accessed"),
         }
     }
+
+    fn get_mut_item_at_dimension_index(&mut self, dimension_index: u32) -> &mut i64 {
+        match dimension_index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            _ => panic!("Unexpected Dimension Index Accessed"),
+        }
+    }
 }
 
 impl Display for MatrixAddress {
@@ -84,6 +92,14 @@ mod tests {
             let a2 = MatrixAddress{x: x2,y: y2};
             prop_assert_eq!(a1.add(&a2).subtract(&a2), a1);
             prop_assert_eq!(a1.subtract(&a2).add(&a2), a1);
+            let mut a1_copy = a1.clone();
+            a1_copy.add_in_place(&a2);
+            a1_copy.subtract_in_place(&a2);
+            prop_assert_eq!(a1_copy, a1);
+            let mut a2_copy = a2.clone();
+            a2_copy.add_in_place(&a1);
+            a2_copy.subtract_in_place(&a1);
+            prop_assert_eq!(a2_copy, a2)
         }
 
         #[test]
@@ -94,6 +110,18 @@ mod tests {
             prop_assert_eq!(a1.subtract(&a2), MatrixAddress{x: x1 - x2,y: y1 - y2});
             prop_assert_eq!(a1.scale(x2 as f64), MatrixAddress{x: x1 * x2,y: y1 * x2});
             prop_assert_eq!(a1.distance(&a2), (((x1 - x2).pow(2) as f64) + ((y1 - y2).pow(2) as f64)).sqrt());
+            let mut a1 = MatrixAddress{x: x1, y: y1};
+            let a2 = MatrixAddress{x: x2,y: y2};
+            a1.add_in_place(&a2);
+            prop_assert_eq!(a1, MatrixAddress{x: x1 + x2,y: y1 + y2});
+            let mut a1 = MatrixAddress{x: x1, y: y1};
+            let a2 = MatrixAddress{x: x2,y: y2};
+            a1.subtract_in_place(&a2);
+            prop_assert_eq!(a1, MatrixAddress{x: x1 - x2,y: y1 - y2});
+            let mut a1 = MatrixAddress{x: x1, y: y1};
+            a1.scale_in_place(x2 as f64);
+            prop_assert_eq!(a1, MatrixAddress{x: x1 * x2,y: y1 * x2});
+            
         }
     }
 }
