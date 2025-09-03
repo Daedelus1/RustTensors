@@ -86,7 +86,11 @@ impl<T> Matrix<T> {
     {
         let values: Vec<Vec<&str>> = data_str
             .split(row_delimiter)
-            .map(|row| row.split(column_delimiter).filter(|string| *string != "").collect())
+            .map(|row| {
+                row.split(column_delimiter)
+                    .filter(|string| *string != "")
+                    .collect()
+            })
             .filter(|row: &Vec<&str>| row.len() != 0)
             .collect();
         if values
@@ -121,7 +125,7 @@ impl<T> Matrix<T> {
     }
 }
 
-impl<'a, T: Display + 'a> Display for Matrix<T> {
+impl<T: Display> Display for Matrix<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,

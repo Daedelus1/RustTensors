@@ -56,7 +56,9 @@ pub trait Addressable: PartialEq + Ord + Sized + Copy + Hash {
     fn distance(&self, other: &Self) -> f64 {
         let mut sum: i64 = 0;
         for dimension_index in 0..Self::get_dimension_count() {
-            sum += (self.get_item_at_dimension_index(dimension_index) - other.get_item_at_dimension_index(dimension_index)).pow(2);
+            sum += (self.get_item_at_dimension_index(dimension_index)
+                - other.get_item_at_dimension_index(dimension_index))
+            .pow(2);
         }
         (sum as f64).sqrt()
     }
