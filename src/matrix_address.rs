@@ -7,23 +7,6 @@ pub struct MatrixAddress {
     pub y: i32,
 }
 
-impl Addressable<i32, 2usize> for MatrixAddress {
-    fn new(data: [i32; 2]) -> Self {
-        MatrixAddress {
-            x: data[0],
-            y: data[1],
-        }
-    }
-
-    fn get_value_at_dimension_index(&self, index: usize) -> i32 {
-        match index {
-            0 => self.x,
-            1 => self.y,
-            _ => panic!("Invalid Dimension Index"),
-        }
-    }
-}
-
 impl MatrixAddress {
     /// Scales the position of the matrix address by the floating point scalar.
     /// Epsilon is added to the results before truncation to avoid floating point precision issues
@@ -36,12 +19,46 @@ impl MatrixAddress {
     /// # Examples
     ///
     /// ```
-    ///
+    /// use rust_tensors::matrix_address::MatrixAddress;
+    /// let address = MatrixAddress {x: 5, y: 10};
+    /// assert_eq!(address.scale(0.5), MatrixAddress {x: 2, y: 5});
     /// ```
     pub fn scale(self, scalar: f64) -> Self {
+        let (mut x, mut y) = (self.x as f64 * scalar, self.y as f64 * scalar);
+        if x > 0.0 {
+            x += f64::EPSILON;
+        }
+        if y > 0.0 {
+            y += f64::EPSILON;
+        }
         MatrixAddress {
-            x: (self.x as f64 * scalar + f64::EPSILON) as i32,
-            y: (self.y as f64 * scalar + f64::EPSILON) as i32,
+            x: x as i32,
+            y: y as i32,
+        }
+    }
+}
+
+impl Addressable<i32, 2usize> for MatrixAddress {
+    fn get_value_at_dimension_index(&self, index: usize) -> i32 {
+        match index {
+            0 => self.x,
+            1 => self.y,
+            _ => panic!("Invalid Dimension Index"),
+        }
+    }
+}
+
+impl Into<[i32; 2]> for MatrixAddress {
+    fn into(self) -> [i32; 2] {
+        [self.x, self.y]
+    }
+}
+
+impl From<[i32; 2]> for MatrixAddress {
+    fn from(value: [i32; 2]) -> Self {
+        Self {
+            x: value[0],
+            y: value[1],
         }
     }
 }
@@ -90,14 +107,14 @@ impl Iterator for MatrixAddressIterator {
     type Item = MatrixAddress;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.x >= self.width as i32 - 1 {
+        if self.x < self.width as i32 - 1 {
+            self.x += 1;
+        } else {
             if self.y >= self.height as i32 - 1 {
                 return None;
             }
             self.x = 0;
             self.y += 1;
-        } else {
-            self.x += 1;
         }
         Some(MatrixAddress {
             x: self.x,
@@ -108,13 +125,12 @@ impl Iterator for MatrixAddressIterator {
 
 #[cfg(test)]
 mod tests {
-    use crate::matrix::Matrix;
     use crate::matrix_address::MatrixAddress;
     use proptest::proptest;
 
     proptest! {
         #[test]
-        fn arithmetic_test(x1 in -1000i32..1000i32, x2 in -1000i32..1000i32, y1 in -1000i32..1000i32, y2 in -1000i32..1000i32) {
+        fn arithmetic_test(x1 in -100000i32..100000i32, x2 in -100000i32..100000i32, y1 in -100000i32..100000i32, y2 in -100000i32..100000i32) {
             let a1 = MatrixAddress{x: x1, y: y1};
             let a2 = MatrixAddress{x: x2, y: y2};
 

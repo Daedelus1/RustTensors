@@ -67,6 +67,7 @@ impl<T> Matrix<T> {
     /// # Examples
     ///
     /// ```
+    /// use rust_tensors::matrix::Matrix;
     /// let mut matrix =
     /// Matrix::<i32>::parse_matrix("1 2 3|4 5 6|7 8 9", " ", "|", |s| s.parse().unwrap())
     ///     .unwrap();
@@ -120,7 +121,7 @@ impl<T> Matrix<T> {
     /// use rust_tensors::matrix::Matrix;
     ///
     /// let mut matrix =
-    ///     Matrix::<i32>::parse_matrix("1 2 3|4 5 6|7 8 9", " ", "|", |s| s.parse().unwrap())
+    ///     Matrix::<i32>::parse_matrix("0 1 2|3 4 5|6 7 8", " ", "|", |s| s.parse().unwrap())
     ///         .unwrap();
     ///
     /// assert_eq!(
@@ -217,18 +218,22 @@ impl<T> Tensor<T, i32, MatrixAddress, MatrixAddressIterator, 2> for Matrix<T> {
             && address.y < self.height as i32
     }
 
-    fn address_iter(&self) -> MatrixAddressIterator {
-        MatrixAddressIterator {
-            x: -1,
-            y: 0,
-            width: self.width,
-            height: self.height,
+    fn smallest_contained_address(&self) -> MatrixAddress {
+        MatrixAddress { x: 0, y: 0 }
+    }
+
+    fn largest_contained_address(&self) -> MatrixAddress {
+        MatrixAddress {
+            x: (self.width - 1) as i32,
+            y: (self.height - 1) as i32,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::address_iterator;
+    use crate::address_iterator::AddressIterator;
     use crate::matrix::Matrix;
     use crate::matrix_address::MatrixAddress;
     use crate::tensor::Tensor;
@@ -302,6 +307,41 @@ mod tests {
             m1[address] -= 1;
         }
     }
+    #[test]
+    fn address_iterator_test() {
+        let iter: address_iterator::AddressIterator<_, MatrixAddress, 2> =
+            AddressIterator::new([0, 0], [3, 5]);
+
+        for a in iter {
+            println!("{a:?}");
+        }
+        let iter: address_iterator::AddressIterator<_, MatrixAddress, 2> =
+            AddressIterator::new([0, 0], [3, 5]);
+        let values = iter
+            .map(|address| (address.x, address.y))
+            .collect::<Vec<(i32, i32)>>();
+        assert_eq!(
+            values,
+            vec![
+                (0, 0),
+                (1, 0),
+                (2, 0),
+                (3, 0),
+                (4, 0),
+                (0, 1),
+                (1, 1),
+                (2, 1),
+                (3, 1),
+                (4, 1),
+                (0, 2),
+                (1, 2),
+                (2, 2),
+                (3, 2),
+                (4, 2),
+            ]
+        )
+    }
+
     proptest! {
         #[test]
         fn address_sugar_test(x in 0..100, y in 0..200) {
