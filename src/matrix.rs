@@ -1,4 +1,4 @@
-use crate::matrix_address::{MatrixAddress, MatrixAddressIterator};
+use crate::matrix_address::MatrixAddress;
 use crate::tensor::Tensor;
 use std::fmt::{Display, Formatter};
 use std::ops::{Index, IndexMut};
@@ -210,7 +210,7 @@ impl<T> IndexMut<(i32, i32)> for Matrix<T> {
     }
 }
 
-impl<T> Tensor<T, i32, MatrixAddress, MatrixAddressIterator, 2> for Matrix<T> {
+impl<T> Tensor<T, i32, MatrixAddress, 2> for Matrix<T> {
     fn contains_address(&self, address: MatrixAddress) -> bool {
         address.x >= 0
             && address.x < self.width as i32
@@ -223,6 +223,7 @@ impl<T> Tensor<T, i32, MatrixAddress, MatrixAddressIterator, 2> for Matrix<T> {
     }
 
     fn largest_contained_address(&self) -> MatrixAddress {
+        //TODO: Come up with better name so redundant math doesnt have to happen
         MatrixAddress {
             x: (self.width - 1) as i32,
             y: (self.height - 1) as i32,
@@ -271,6 +272,9 @@ mod tests {
         let matrix = Matrix::new(width, height, |address| {
             address.x as usize + address.y as usize * width
         });
+        assert_eq!(matrix.index_address(MatrixAddress { x: 999, y: 0 }), 999);
+        assert_eq!(matrix.index_address(MatrixAddress { x: 0, y: 1 }), 1000);
+        assert_eq!(matrix.index_address(MatrixAddress { x: 1, y: 1 }), 1001);
         matrix
             .address_iter()
             .for_each(|address| assert_eq!(matrix.index_address(address), matrix[address]))
@@ -326,20 +330,33 @@ mod tests {
                 (0, 0),
                 (1, 0),
                 (2, 0),
-                (3, 0),
-                (4, 0),
                 (0, 1),
                 (1, 1),
                 (2, 1),
-                (3, 1),
-                (4, 1),
                 (0, 2),
                 (1, 2),
                 (2, 2),
-                (3, 2),
-                (4, 2),
+                (0, 3),
+                (1, 3),
+                (2, 3),
+                (0, 4),
+                (1, 4),
+                (2, 4),
             ]
         )
+    }
+    #[test]
+    fn address_sugar_test_indv() {
+        let (x, y) = (0, 198);
+        let matrix = Matrix::new(100, 200, |address| address.y * 100 + address.x);
+        let mut mut_matrix = matrix.clone();
+        let pos_tuple = (x, y);
+        let pos_address = MatrixAddress { x, y };
+        assert_eq!(matrix[pos_tuple], matrix[pos_address]);
+        let temp = matrix[pos_tuple];
+        mut_matrix[pos_address] = -1;
+        mut_matrix[pos_tuple] = temp;
+        assert_eq!(matrix, mut_matrix);
     }
 
     proptest! {

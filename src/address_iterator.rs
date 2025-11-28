@@ -58,8 +58,50 @@ impl<
 
 #[cfg(test)]
 mod tests {
+    use crate::matrix::Matrix;
+    use crate::matrix_address::MatrixAddress;
+    use crate::tensor::Tensor;
+
+    pub struct MatrixAddressIterator {
+        pub(crate) x: i32,
+        pub(crate) y: i32,
+        pub(crate) width: usize,
+        pub(crate) height: usize,
+    }
+
+    impl Iterator for MatrixAddressIterator {
+        type Item = MatrixAddress;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.x >= self.width as i32 - 1 {
+                if self.y >= self.height as i32 - 1 {
+                    return None;
+                }
+                self.x = 0;
+                self.y += 1;
+            } else {
+                self.x += 1;
+            }
+            Some(MatrixAddress {
+                x: self.x,
+                y: self.y,
+            })
+        }
+    }
     #[test]
     fn address_iterator_test() {
+        let (width, height) = (1000, 2000);
+        let matrix_address_iterator = MatrixAddressIterator {
+            x: -1,
+            y: 0,
+            width,
+            height,
+        };
+        let matrix = Matrix::new(width, height, |_| 0);
+        for (true_address, new_address) in matrix_address_iterator.zip(matrix.address_iter()) {
+            //print!("\r\r{true_address:?} | {new_address:?}");
+            assert_eq!(true_address, new_address);
+        }
         // let iter = AddressIterator::<MatrixAddress, i32, 2>::new([0, 0], [3, 4]);
         // for address in iter {
         //     println!("{address:?}");

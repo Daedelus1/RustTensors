@@ -6,7 +6,6 @@ pub trait Tensor<
     T,
     V: Copy + From<u8> + Add<Output = V> + Sub<Output = V> + PartialOrd,
     A: Addressable<V, DIMENSION>,
-    I: Iterator,
     const DIMENSION: usize,
 >: Index<A, Output = T> + IndexMut<A, Output = T>
 {
@@ -32,13 +31,13 @@ pub trait Tensor<
         }
     }
     fn address_iter(&self) -> AddressIterator<V, A, DIMENSION> {
-        let upper_bounds_exclusive = self.largest_contained_address().into();
-        for mut i in upper_bounds_exclusive {
-            i = i + 1.into();
+        let mut upper_bounds_exclusive = self.largest_contained_address().into();
+        for d in 0..DIMENSION {
+            upper_bounds_exclusive[d] = upper_bounds_exclusive[d] + 1.into();
         }
         AddressIterator::<V, A, DIMENSION>::new(
-            self.smallest_contained_address().into().clone(),
-            upper_bounds_exclusive.clone(),
+            self.smallest_contained_address().into(),
+            upper_bounds_exclusive,
         )
     }
 }
