@@ -103,8 +103,8 @@ impl<T> Matrix<T> {
     }
 
     /// Parses a matrix from a string.
-    /// Fallible, will return an Err if the matrix cannot be parsed,
-    /// or if the matrix does not have uniform row length
+    /// Fallible, and will return an Err if the matrix cannot be parsed,
+    /// or if the matrix does not have a uniform row length
     ///
     /// # Arguments
     ///
@@ -113,7 +113,7 @@ impl<T> Matrix<T> {
     /// * `row_delimiter`: The string which separates the rows
     /// * `str_to_t_converter`: The function which converts the item strings to a value
     ///
-    /// returns: Result<Matrix<T>, String>
+    /// Returns: Result<Matrix<T>, String>
     ///
     /// # Examples
     ///
@@ -165,6 +165,19 @@ impl<T> Matrix<T> {
     }
 }
 
+impl<T> Tensor<T, i32, MatrixAddress, 2> for Matrix<T> {
+    fn smallest_contained_address(&self) -> MatrixAddress {
+        MatrixAddress { x: 0, y: 0 }
+    }
+
+    fn largest_contained_address(&self) -> MatrixAddress {
+        MatrixAddress {
+            x: (self.width - 1) as i32,
+            y: (self.height - 1) as i32,
+        }
+    }
+}
+
 impl<T: Display> Display for Matrix<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -210,30 +223,8 @@ impl<T> IndexMut<(i32, i32)> for Matrix<T> {
     }
 }
 
-impl<T> Tensor<T, i32, MatrixAddress, 2> for Matrix<T> {
-    fn contains_address(&self, address: MatrixAddress) -> bool {
-        address.x >= 0
-            && address.x < self.width as i32
-            && address.y >= 0
-            && address.y < self.height as i32
-    }
-
-    fn smallest_contained_address(&self) -> MatrixAddress {
-        MatrixAddress { x: 0, y: 0 }
-    }
-
-    fn largest_contained_address(&self) -> MatrixAddress {
-        //TODO: Come up with better name so redundant math doesnt have to happen
-        MatrixAddress {
-            x: (self.width - 1) as i32,
-            y: (self.height - 1) as i32,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::address_iterator;
     use crate::address_iterator::AddressIterator;
     use crate::matrix::Matrix;
     use crate::matrix_address::MatrixAddress;
@@ -248,7 +239,9 @@ mod tests {
             "0 1 2 3 4 5 6 0 1 2 3\n4 5 6 0 1 2 3 4 5 6 0\n1 2 3 4 5 6 0 1 2 3 4\n5 6 0 1 2 3 4 5 6 0 1\n2 3 4 5 6 0 1 2 3 4 5\n6 0 1 2 3 4 5 6 0 1 2\n3 4 5 6 0 1 2 3 4 5 6\n0 1 2 3 4 5 6 0 1 2 3\n4 5 6 0 1 2 3 4 5 6 0\n1 2 3 4 5 6 0 1 2 3 4\n5 6 0 1 2 3 4 5 6 0 1",
             format!(
                 "{}",
-                Matrix::new(width, height, |address: MatrixAddress| {(address.x as usize + address.y as usize * width ) % 7})
+                Matrix::new(width, height, |address: MatrixAddress| {
+                    (address.x as usize + address.y as usize * width) % 7
+                })
             )
         )
     }
@@ -313,14 +306,7 @@ mod tests {
     }
     #[test]
     fn address_iterator_test() {
-        let iter: address_iterator::AddressIterator<_, MatrixAddress, 2> =
-            AddressIterator::new([0, 0], [3, 5]);
-
-        for a in iter {
-            println!("{a:?}");
-        }
-        let iter: address_iterator::AddressIterator<_, MatrixAddress, 2> =
-            AddressIterator::new([0, 0], [3, 5]);
+        let iter: AddressIterator<_, MatrixAddress, 2> = AddressIterator::new([0, 0], [2, 4]);
         let values = iter
             .map(|address| (address.x, address.y))
             .collect::<Vec<(i32, i32)>>();
@@ -345,20 +331,6 @@ mod tests {
             ]
         )
     }
-    #[test]
-    fn address_sugar_test_indv() {
-        let (x, y) = (0, 198);
-        let matrix = Matrix::new(100, 200, |address| address.y * 100 + address.x);
-        let mut mut_matrix = matrix.clone();
-        let pos_tuple = (x, y);
-        let pos_address = MatrixAddress { x, y };
-        assert_eq!(matrix[pos_tuple], matrix[pos_address]);
-        let temp = matrix[pos_tuple];
-        mut_matrix[pos_address] = -1;
-        mut_matrix[pos_tuple] = temp;
-        assert_eq!(matrix, mut_matrix);
-    }
-
     proptest! {
         #[test]
         fn address_sugar_test(x in 0..100, y in 0..200) {

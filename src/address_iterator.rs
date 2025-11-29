@@ -5,26 +5,26 @@ use std::ops::{Add, Sub};
 pub struct AddressIterator<V: Copy + From<u8>, A: Addressable<V, DIMENSION>, const DIMENSION: usize>
 {
     lower_bounds_inclusive: [V; DIMENSION],
-    upper_bounds_exclusive: [V; DIMENSION],
+    upper_bounds_inclusive: [V; DIMENSION],
     current_position: [V; DIMENSION],
     _marker: PhantomData<A>,
 }
 
 impl<
-        V: Copy + From<u8> + Add<Output = V> + Sub<Output = V> + PartialOrd,
-        A: Addressable<V, DIMENSION>,
-        const DIMENSION: usize,
-    > AddressIterator<V, A, DIMENSION>
+    V: Copy + From<u8> + Add<Output = V> + Sub<Output = V> + PartialOrd,
+    A: Addressable<V, DIMENSION>,
+    const DIMENSION: usize,
+> AddressIterator<V, A, DIMENSION>
 {
     pub(crate) fn new(
         lower_bounds_inclusive: [V; DIMENSION],
-        upper_bounds_exclusive: [V; DIMENSION],
+        upper_bounds_inclusive: [V; DIMENSION],
     ) -> Self {
         let mut lower_bounds_copy: [V; DIMENSION] = lower_bounds_inclusive;
         lower_bounds_copy[0] = lower_bounds_copy[0] - 1.into();
         Self {
             lower_bounds_inclusive,
-            upper_bounds_exclusive,
+            upper_bounds_inclusive,
             current_position: lower_bounds_copy,
             _marker: PhantomData,
         }
@@ -32,17 +32,16 @@ impl<
 }
 
 impl<
-        V: Copy + From<u8> + Add<Output = V> + Sub<Output = V> + PartialOrd,
-        A: Addressable<V, DIMENSION>,
-        const DIMENSION: usize,
-    > Iterator for AddressIterator<V, A, DIMENSION>
+    V: Copy + From<u8> + Add<Output = V> + Sub<Output = V> + PartialOrd,
+    A: Addressable<V, DIMENSION>,
+    const DIMENSION: usize,
+> Iterator for AddressIterator<V, A, DIMENSION>
 {
     type Item = A;
 
     fn next(&mut self) -> Option<Self::Item> {
         for dimension_index in 0..DIMENSION {
-            if self.current_position[dimension_index] + 1.into()
-                < self.upper_bounds_exclusive[dimension_index]
+            if self.current_position[dimension_index] < self.upper_bounds_inclusive[dimension_index]
             {
                 self.current_position[dimension_index] =
                     self.current_position[dimension_index] + 1.into();
@@ -62,13 +61,13 @@ mod tests {
     use crate::matrix_address::MatrixAddress;
     use crate::tensor::Tensor;
 
+    // Working address iterator from the previous version
     pub struct MatrixAddressIterator {
         pub(crate) x: i32,
         pub(crate) y: i32,
         pub(crate) width: usize,
         pub(crate) height: usize,
     }
-
     impl Iterator for MatrixAddressIterator {
         type Item = MatrixAddress;
 
@@ -88,6 +87,7 @@ mod tests {
             })
         }
     }
+
     #[test]
     fn address_iterator_test() {
         let (width, height) = (1000, 2000);
@@ -99,12 +99,7 @@ mod tests {
         };
         let matrix = Matrix::new(width, height, |_| 0);
         for (true_address, new_address) in matrix_address_iterator.zip(matrix.address_iter()) {
-            //print!("\r\r{true_address:?} | {new_address:?}");
             assert_eq!(true_address, new_address);
         }
-        // let iter = AddressIterator::<MatrixAddress, i32, 2>::new([0, 0], [3, 4]);
-        // for address in iter {
-        //     println!("{address:?}");
-        // }
     }
 }
