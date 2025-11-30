@@ -10,6 +10,11 @@ pub struct Matrix<T> {
     data: Vec<T>,
 }
 
+#[derive(Debug)]
+pub struct ParseError {
+    message: String,
+}
+
 impl<T> Matrix<T> {
     /// Creates a new Matrix based on dimensions and a mapper function.
     ///
@@ -113,7 +118,7 @@ impl<T> Matrix<T> {
     /// * `row_delimiter`: The string which separates the rows
     /// * `str_to_t_converter`: The function which converts the item strings to a value
     ///
-    /// Returns: Result<Matrix<T>, String>
+    /// Returns: Result<Matrix<T>, ParseError>, The matrix if it was able to be parsed.
     ///
     /// # Examples
     ///
@@ -133,7 +138,7 @@ impl<T> Matrix<T> {
         column_delimiter: &str,
         row_delimiter: &str,
         str_to_t_converter: F,
-    ) -> Result<Matrix<T>, String>
+    ) -> Result<Matrix<T>, ParseError>
     where
         F: Fn(&str) -> T,
     {
@@ -151,7 +156,9 @@ impl<T> Matrix<T> {
             .skip(1)
             .any(|row| row.len() != values.first().unwrap().len())
         {
-            return Err("Row Lengths are not constant".into());
+            return Err(ParseError {
+                message: "Row Lengths are not constant".into(),
+            });
         }
         let height = values.len();
         let width = values.first().unwrap().len();
@@ -160,12 +167,28 @@ impl<T> Matrix<T> {
             str_to_t_converter(values[address.y as usize][address.x as usize])
         }))
     }
+
+    pub fn transform<TNew, F: Fn(MatrixAddress, &T) -> TNew>(
+        self,
+        mapper_function: F,
+    ) -> Matrix<TNew> {
+        let data = self
+            .address_value_iter()
+            .map(|(address, value)| mapper_function(address, value))
+            .collect::<Vec<TNew>>();
+        Matrix {
+            data,
+            width: self.width,
+            height: self.height,
+        }
+    }
+
     fn index_address(&self, address: MatrixAddress) -> usize {
         address.y as usize * self.width + address.x as usize
     }
 }
 
-impl<T> Tensor<T, i32, MatrixAddress, 2> for Matrix<T> {
+impl<'a, T: 'a> Tensor<'a, T, i32, MatrixAddress, 2> for Matrix<T> {
     fn smallest_contained_address(&self) -> MatrixAddress {
         MatrixAddress { x: 0, y: 0 }
     }

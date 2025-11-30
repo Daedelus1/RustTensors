@@ -1,4 +1,5 @@
-use crate::adressable::Addressable;
+use crate::adressable::{AddressValue, Addressable};
+use crate::tensor::Tensor;
 use std::marker::PhantomData;
 use std::ops::{Add, Sub};
 
@@ -10,11 +11,21 @@ pub struct AddressIterator<V: Copy + From<u8>, A: Addressable<V, DIMENSION>, con
     _marker: PhantomData<A>,
 }
 
-impl<
-    V: Copy + From<u8> + Add<Output = V> + Sub<Output = V> + PartialOrd,
+pub struct AddressValueIterator<
+    'a,
+    T: 'a,
+    V: AddressValue,
     A: Addressable<V, DIMENSION>,
+    TENSOR: Tensor<'a, T, V, A, DIMENSION>,
     const DIMENSION: usize,
-> AddressIterator<V, A, DIMENSION>
+> {
+    address_iterator: AddressIterator<V, A, DIMENSION>,
+    tensor: &'a TENSOR,
+    _marker: PhantomData<T>,
+}
+
+impl<V: AddressValue, A: Addressable<V, DIMENSION>, const DIMENSION: usize>
+    AddressIterator<V, A, DIMENSION>
 {
     pub(crate) fn new(
         lower_bounds_inclusive: [V; DIMENSION],
@@ -32,10 +43,28 @@ impl<
 }
 
 impl<
-    V: Copy + From<u8> + Add<Output = V> + Sub<Output = V> + PartialOrd,
+    'a,
+    T: 'a,
+    V: AddressValue,
     A: Addressable<V, DIMENSION>,
+    TENSOR: Tensor<'a, T, V, A, DIMENSION>,
     const DIMENSION: usize,
-> Iterator for AddressIterator<V, A, DIMENSION>
+> AddressValueIterator<'a, T, V, A, TENSOR, DIMENSION>
+{
+    pub(crate) fn new(tensor: &'a TENSOR) -> Self {
+        Self {
+            address_iterator: AddressIterator::new(
+                tensor.smallest_contained_address().into(),
+                tensor.largest_contained_address().into(),
+            ),
+            tensor,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<V: AddressValue, A: Addressable<V, DIMENSION>, const DIMENSION: usize> Iterator
+    for AddressIterator<V, A, DIMENSION>
 {
     type Item = A;
 
@@ -52,6 +81,26 @@ impl<
             }
         }
         None
+    }
+}
+
+impl<
+    'a,
+    T: 'a,
+    V: AddressValue,
+    A: Addressable<V, DIMENSION>,
+    TENSOR: Tensor<'a, T, V, A, DIMENSION>,
+    const DIMENSION: usize,
+> Iterator for AddressValueIterator<'a, T, V, A, TENSOR, DIMENSION>
+{
+    type Item = (A, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(address) = self.address_iterator.next() {
+            Some((address, &self.tensor[address]))
+        } else {
+            None
+        }
     }
 }
 
@@ -101,5 +150,21 @@ mod tests {
         for (true_address, new_address) in matrix_address_iterator.zip(matrix.address_iter()) {
             assert_eq!(true_address, new_address);
         }
+    }
+
+    #[test]
+    fn address_value_iterator_test() {
+        let (width, height) = (1000, 2000);
+        let matrix = Matrix::new(width, height, |address| {
+            address.y * width as i32 + address.x
+        });
+        let address_iter = matrix.address_iter();
+        let address_value_iter = matrix.address_value_iter();
+        address_iter
+            .zip(address_value_iter)
+            .for_each(|(a1, (a2, value))| {
+                assert_eq!(a1, a2);
+                assert_eq!(*value, a2.y * width as i32 + a2.x);
+            })
     }
 }
