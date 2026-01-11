@@ -1,7 +1,6 @@
 use crate::adressable::{AddressValue, Addressable};
 use crate::tensor::Tensor;
 use std::marker::PhantomData;
-use std::ops::{Add, Sub};
 
 pub struct AddressIterator<V: Copy + From<u8>, A: Addressable<V, DIMENSION>, const DIMENSION: usize>
 {
@@ -146,7 +145,7 @@ mod tests {
             width,
             height,
         };
-        let matrix = Matrix::new(width, height, |_| 0);
+        let matrix = Matrix::new(width, height, |_| 0).unwrap();
         for (true_address, new_address) in matrix_address_iterator.zip(matrix.address_iter()) {
             assert_eq!(true_address, new_address);
         }
@@ -157,7 +156,7 @@ mod tests {
         let (width, height) = (1000, 2000);
         let matrix = Matrix::new(width, height, |address| {
             address.y * width as i32 + address.x
-        });
+        }).unwrap();
         let address_iter = matrix.address_iter();
         let address_value_iter = matrix.address_value_iter();
         address_iter
@@ -166,5 +165,13 @@ mod tests {
                 assert_eq!(a1, a2);
                 assert_eq!(*value, a2.y * width as i32 + a2.x);
             })
+    }
+
+    #[test]
+    fn transform_test() {
+        let (width, height) = (1000, 1000);
+        let matrix = Matrix::new(width, height, |_| 0u8).unwrap();
+        let matrix = matrix.transform(|address, _value| address.y * width as i32 + address.x);
+        matrix.address_value_iter().for_each(|(address, value)| assert_eq!(address.y * width as i32 + address.x, *value));
     }
 }

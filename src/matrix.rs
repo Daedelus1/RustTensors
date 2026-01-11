@@ -12,11 +12,12 @@ pub struct Matrix<T> {
 
 #[derive(Debug)]
 pub struct ParseError {
-    message: String,
+    pub message: String,
 }
 
 impl<T> Matrix<T> {
     /// Creates a new Matrix based on dimensions and a mapper function.
+    /// Will return None if and only if the width or height are equal to zero.
     ///
     /// # Arguments
     ///
@@ -24,7 +25,7 @@ impl<T> Matrix<T> {
     /// * `height`: The height, or number of rows in the matrix
     /// * `address_value_converter`: Converts a matrix address to a value.
     ///
-    /// Returns: Matrix<T>
+    /// Returns: `Option<Matrix<T>>`
     ///
     /// # Examples
     ///
@@ -34,20 +35,23 @@ impl<T> Matrix<T> {
     ///
     /// // Creates a 1000x1000 zero matrix
     /// let (width, height) = (1000, 1000);
-    /// let mut matrix = Matrix::new(width, height, |_address| 0usize);
+    /// let mut matrix = Matrix::new(width, height, |_address| 0usize).unwrap();
     /// matrix.address_iter()
     ///     .for_each(|address| assert_eq!(matrix[address], 0));
     ///
     /// // Creates a 50x10 matrix where the value is the index of the array
     /// let (width, height) = (1000, 1000);
-    /// let mut matrix = Matrix::new(width, height, |address| address.y * width as i32 + address.x);
+    /// let mut matrix = Matrix::new(width, height, |address| address.y * width as i32 + address.x).unwrap();
     /// matrix.address_iter()
     ///     .for_each(|address| assert_eq!(matrix[address], address.y * width as i32 + address.x));
     /// ```
-    pub fn new<F>(width: usize, height: usize, address_value_converter: F) -> Self
+    pub fn new<F>(width: usize, height: usize, address_value_converter: F) -> Option<Self>
     where
         F: Fn(MatrixAddress) -> T,
     {
+        if width == 0 || height == 0 {
+            return None;
+        }
         let mut matrix = Matrix {
             width,
             height,
@@ -56,7 +60,7 @@ impl<T> Matrix<T> {
         matrix
             .address_iter()
             .for_each(|address| matrix.data.push(address_value_converter(address)));
-        matrix
+        Some(matrix)
     }
 
     /// Makes a string fit for displaying the contents of the matrix
@@ -130,7 +134,7 @@ impl<T> Matrix<T> {
     ///         .unwrap();
     ///
     /// assert_eq!(
-    ///     matrix, Matrix::new(3, 3, |address| address.x + 3 * address.y)
+    ///     matrix, Matrix::new(3, 3, |address| address.x + 3 * address.y).unwrap()
     /// );
     /// ```
     pub fn parse_matrix<F>(
@@ -163,9 +167,15 @@ impl<T> Matrix<T> {
         let height = values.len();
         let width = values.first().unwrap().len();
 
-        Ok(Matrix::new(width, height, |address| {
+        if let Some(matrix) = Matrix::new(width, height, |address| {
             str_to_t_converter(values[address.y as usize][address.x as usize])
-        }))
+        }) {
+            Ok(matrix)
+        } else {
+            Err(ParseError {
+                message: "Could not parse matrix.".into(),
+            })
+        }
     }
 
     pub fn transform<TNew, F: Fn(MatrixAddress, &T) -> TNew>(
@@ -265,13 +275,14 @@ mod tests {
                 Matrix::new(width, height, |address: MatrixAddress| {
                     (address.x as usize + address.y as usize * width) % 7
                 })
+                .unwrap()
             )
         )
     }
     #[test]
     fn set_test() {
         let (width, height) = (1000, 1000);
-        let mut matrix = Matrix::new(width, height, |_address| 0usize);
+        let mut matrix = Matrix::new(width, height, |_address| 0usize).unwrap();
         matrix.address_iter().for_each(|address| {
             assert_eq!(matrix[address], 0usize);
             matrix[address] = matrix.index_address(address);
@@ -287,13 +298,15 @@ mod tests {
         let (width, height) = (1000, 1000);
         let matrix = Matrix::new(width, height, |address| {
             address.x as usize + address.y as usize * width
-        });
+        })
+        .unwrap();
         assert_eq!(matrix.index_address(MatrixAddress { x: 999, y: 0 }), 999);
         assert_eq!(matrix.index_address(MatrixAddress { x: 0, y: 1 }), 1000);
         assert_eq!(matrix.index_address(MatrixAddress { x: 1, y: 1 }), 1001);
-        matrix
-            .address_iter()
-            .for_each(|address| assert_eq!(matrix.index_address(address), matrix[address]))
+        matrix.address_iter().for_each(|address| {
+            assert_eq!(matrix.index_address(address), matrix[address]);
+            assert_eq!(Some(&matrix[address]), matrix.get(address));
+        })
     }
     #[test]
     fn parse_test() {
@@ -303,7 +316,25 @@ mod tests {
             Matrix::new(width, height, |address: MatrixAddress| (address.y
                 * width as i32
                 + address.x)
-                % 7),
+                % 7)
+            .unwrap(),
+            Matrix::parse_matrix(data_str, ",", "|", |string| i32::from_str(string)
+                .expect(""))
+            .expect("")
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_err_test() {
+        let data_str = "0,1,3,4,5,6,0,1,2,3|4,5,6,0,1,2,3,4,5,6,0|1,2,3,4,5,6,0,1,2,3,4|5,6,0,1,2,3,4,5,6,0,1|2,3,4,5,6,0,1,2,3,4,5|6,0,1,2,3,4,5,6,0,1,2|3,4,5,6,0,1,2,3,4,5,6|0,1,2,3,4,5,6,0,1,2,3|4,5,6,0,1,2,3,4,5,6,0|1,2,3,4,5,6,0,1,2,3,4|5,6,0,1,2,3,4,5,6,0,1";
+        let (width, height) = (11, 11);
+        assert_eq!(
+            Matrix::new(width, height, |address: MatrixAddress| (address.y
+                * width as i32
+                + address.x)
+                % 7)
+            .unwrap(),
             Matrix::parse_matrix(data_str, ",", "|", |string| i32::from_str(string)
                 .expect(""))
             .expect("")
@@ -315,10 +346,12 @@ mod tests {
         let (width, height) = (100, 200);
         let mut m1 = Matrix::new(width, height, |address| {
             address.y * width as i32 + address.x
-        });
+        })
+        .unwrap();
         let m2 = Matrix::new(width, height, |address| {
             address.y * width as i32 + address.x
-        });
+        })
+        .unwrap();
         assert_eq!(m1, m2);
         for address in m1.address_iter() {
             assert_eq!(m1, m2);
@@ -354,10 +387,11 @@ mod tests {
             ]
         )
     }
+
     proptest! {
         #[test]
         fn address_sugar_test(x in 0..100, y in 0..200) {
-            let matrix = Matrix::new(100, 200, |address| address.y * 100 + address.x);
+            let matrix = Matrix::new(100, 200, |address| address.y * 100 + address.x).unwrap();
             let mut mut_matrix = matrix.clone();
             let pos_tuple = (x, y);
             let pos_address = MatrixAddress{x, y};
@@ -366,6 +400,12 @@ mod tests {
             mut_matrix[pos_address] = -1;
             mut_matrix[pos_tuple] = temp;
             assert_eq!(matrix, mut_matrix);
+        }
+        #[test]
+        fn contains_address_test(x in -1000..1000, y in -1000..1000, width in 1usize..1000usize, height in 1usize..1000usize) {
+            let matrix = Matrix::new(width, height, |_| 0u8).unwrap();
+            let address = MatrixAddress{x, y};
+            assert_eq!( matrix.contains_address(address), x >= 0 && y >= 0 && x < width as i32 && y < height as i32 )
         }
     }
 }

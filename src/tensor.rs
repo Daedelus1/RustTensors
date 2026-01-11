@@ -23,6 +23,7 @@ pub trait Tensor<'a, T: 'a, V: AddressValue, A: Addressable<V, DIMENSION>, const
             None
         }
     }
+
     /// Attempts to get a mutable reference of the value at the given address. Will return `None` if the
     /// address is not contained in the matrix.
     ///
