@@ -12,7 +12,7 @@ To use, simply add the following to your cargo.toml file:
 
 ```toml
 [dependencies]
-rust_tensors = "0.3.0"
+rust_tensors = "0.4.0"
 ```
 
 This will allow you to use the traits to make your own arbitrary dimensional arrays.
