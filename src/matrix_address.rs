@@ -1,4 +1,7 @@
-use crate::adressable::Addressable;
+use crate::{
+    adressable::Addressable, error::Error, generic_tensor::GenericTensor,
+    generic_tensor_address::GenericTensorAddress,
+};
 use std::ops::{Add, Neg, Sub};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -39,17 +42,17 @@ impl MatrixAddress {
 }
 
 impl Addressable<i32, 2usize> for MatrixAddress {
-    fn get_value_at_dimension_index(&self, index: usize) -> i32 {
+    fn get_value_at_rank(&self, index: usize) -> i32 {
         match index {
             0 => self.x,
             1 => self.y,
-            _ => panic!("Invalid Dimension Index"),
+            _ => panic!("Invalid Rank"),
         }
     }
 }
 
-impl From<[i32; 2]> for MatrixAddress {
-    fn from(value: [i32; 2]) -> Self {
+impl From<GenericTensorAddress<2, i32>> for MatrixAddress {
+    fn from(value: GenericTensorAddress<2, i32>) -> Self {
         Self {
             x: value[0],
             y: value[1],
@@ -57,9 +60,9 @@ impl From<[i32; 2]> for MatrixAddress {
     }
 }
 
-impl Into<[i32; 2]> for MatrixAddress {
-    fn into(self) -> [i32; 2] {
-        [self.x, self.y]
+impl From<MatrixAddress> for GenericTensorAddress<2, i32> {
+    fn from(val: MatrixAddress) -> Self {
+        GenericTensorAddress::new([val.x, val.y])
     }
 }
 
@@ -96,6 +99,15 @@ impl Neg for MatrixAddress {
     }
 }
 
+impl From<GenericTensorAddress<2>> for MatrixAddress {
+    fn from(value: GenericTensorAddress<2>) -> Self {
+        MatrixAddress {
+            x: value[0] as i32,
+            y: value[1] as i32,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::adressable::Addressable;
@@ -108,10 +120,10 @@ mod tests {
             let a1 = MatrixAddress{x: x1, y: y1};
             let a2 = MatrixAddress{x: x2, y: y2};
 
-            assert_eq!(a1.get_value_at_dimension_index(0), x1);
-            assert_eq!(a1.get_value_at_dimension_index(1), y1);
-            assert_eq!(a2.get_value_at_dimension_index(0), x2);
-            assert_eq!(a2.get_value_at_dimension_index(1), y2);
+            assert_eq!(a1.get_value_at_rank(0), x1);
+            assert_eq!(a1.get_value_at_rank(1), y1);
+            assert_eq!(a2.get_value_at_rank(0), x2);
+            assert_eq!(a2.get_value_at_rank(1), y2);
 
             assert_eq!(a1 - a2, a1 + (-a2));
             assert_eq!(a2 - a1, a2 + (-a1));

@@ -3,7 +3,7 @@ use crate::adressable::Addressable;
 use crate::{address_iterator::AddressIterator, adressable::AddressValue};
 use std::ops::{Index, IndexMut};
 
-pub trait Tensor<'a, T: 'a, V: AddressValue, A: Addressable<V, DIMENSION>, const DIMENSION: usize>:
+pub trait Tensor<'a, T: 'a, V: AddressValue, A: Addressable<V, RANK>, const RANK: usize>:
     Index<A, Output = T> + IndexMut<A, Output = T>
 {
     fn smallest_contained_address(&self) -> A;
@@ -48,15 +48,10 @@ pub trait Tensor<'a, T: 'a, V: AddressValue, A: Addressable<V, DIMENSION>, const
     /// Returns: `bool`, A boolean which is true if and only if the address is valid and has an
     /// associated value.
     fn contains_address(&self, address: A) -> bool {
-        (0..DIMENSION).all(|d| {
-            address.get_value_at_dimension_index(d)
-                >= self
-                    .smallest_contained_address()
-                    .get_value_at_dimension_index(d)
-                && address.get_value_at_dimension_index(d)
-                    <= self
-                        .largest_contained_address()
-                        .get_value_at_dimension_index(d)
+        (0..RANK).all(|d| {
+            address.get_value_at_rank(d) >= self.smallest_contained_address().get_value_at_rank(d)
+                && address.get_value_at_rank(d)
+                    <= self.largest_contained_address().get_value_at_rank(d)
         })
     }
     /// Creates an iterator over the addresses within the bounds of the tensor.
@@ -66,19 +61,19 @@ pub trait Tensor<'a, T: 'a, V: AddressValue, A: Addressable<V, DIMENSION>, const
     ///
     /// # Returns
     ///
-    /// An instance of `AddressIterator<V, A, DIMENSION>`, initialized to iterate between
+    /// An instance of `AddressIterator<V, A, RANK>`, initialized to iterate between
     /// the smallest and largest contained addresses of the current object.
-    fn address_iter(&self) -> AddressIterator<V, A, DIMENSION> {
-        AddressIterator::<V, A, DIMENSION>::new(
+    fn address_iter(&self) -> AddressIterator<V, A, RANK> {
+        AddressIterator::<V, A, RANK>::new(
             self.smallest_contained_address().into(),
             self.largest_contained_address().into(),
         )
     }
 
-    fn address_value_iter(&'a self) -> AddressValueIterator<'a, T, V, A, Self, DIMENSION>
+    fn address_value_iter(&'a self) -> AddressValueIterator<'a, T, V, A, Self, RANK>
     where
         Self: Sized,
     {
-        AddressValueIterator::<'a, T, V, A, Self, DIMENSION>::new(&self)
+        AddressValueIterator::<'a, T, V, A, Self, RANK>::new(&self)
     }
 }

@@ -362,7 +362,8 @@ mod tests {
     }
     #[test]
     fn address_iterator_test() {
-        let iter: AddressIterator<_, MatrixAddress, 2> = AddressIterator::new([0, 0], [2, 4]);
+        let iter: AddressIterator<_, MatrixAddress, 2> =
+            AddressIterator::new([0, 0].into(), [2, 4].into());
         let values = iter
             .map(|address| (address.x, address.y))
             .collect::<Vec<(i32, i32)>>();

@@ -1,17 +1,23 @@
 use std::{
     fmt::Debug,
-    ops::{Add, Sub},
+    ops::{Add, Mul, Sub},
 };
 
-pub trait Addressable<V, const DIMENSION: usize>:
-    Copy + Clone + Debug + From<[V; DIMENSION]> + Into<[V; DIMENSION]>
+use crate::generic_tensor_address::GenericTensorAddress;
+
+pub trait Addressable<V: AddressValue, const RANK: usize>:
+    Copy + Clone + Debug + From<GenericTensorAddress<RANK, V>> + Into<GenericTensorAddress<RANK, V>>
 {
-    fn get_value_at_dimension_index(&self, index: usize) -> V;
+    fn get_value_at_rank(&self, index: usize) -> V;
 }
 
 pub trait AddressValue:
-    Copy + From<u8> + Add<Output = Self> + Sub<Output = Self> + PartialOrd
+    Copy + From<u8> + Add<Output = Self> + Sub<Output = Self> + PartialOrd + Debug + TryInto<usize>
 {
 }
 
-impl<T: Copy + From<u8> + Add<Output = Self> + Sub<Output = Self> + PartialOrd> AddressValue for T {}
+impl<
+    T: Copy + From<u8> + Add<Output = Self> + Sub<Output = Self> + PartialOrd + Debug + TryInto<usize>,
+> AddressValue for T
+{
+}
