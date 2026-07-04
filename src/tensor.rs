@@ -74,6 +74,6 @@ pub trait Tensor<'a, T: 'a, V: AddressValue, A: Addressable<V, RANK>, const RANK
     where
         Self: Sized,
     {
-        AddressValueIterator::<'a, T, V, A, Self, RANK>::new(&self)
+        AddressValueIterator::<'a, T, V, A, Self, RANK>::new(self)
     }
 }

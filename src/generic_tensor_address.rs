@@ -1,10 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use crate::{
-    adressable::{AddressValue, Addressable},
-    error::Error,
-    matrix_address::MatrixAddress,
-};
+use crate::adressable::{AddressValue, Addressable};
 
 #[derive(Debug, Clone, Copy)]
 pub struct GenericTensorAddress<const RANK: usize, V: AddressValue = usize> {
@@ -25,7 +21,7 @@ impl<const RANK: usize, V: AddressValue> GenericTensorAddress<RANK, V> {
 
 impl<const RANK: usize, V: AddressValue> Addressable<V, RANK> for GenericTensorAddress<RANK, V> {
     fn get_value_at_rank(&self, index: usize) -> V {
-        return self.data[index];
+        self.data[index]
     }
 }
 
@@ -33,27 +29,27 @@ impl<const RANK: usize, V: AddressValue> Index<usize> for GenericTensorAddress<R
     type Output = V;
 
     fn index(&self, rank_index: usize) -> &Self::Output {
-        return &self.data[rank_index];
+        &self.data[rank_index]
     }
 }
 impl<const RANK: usize, V: AddressValue> IndexMut<usize> for GenericTensorAddress<RANK, V> {
     fn index_mut(&mut self, rank_index: usize) -> &mut Self::Output {
-        return &mut self.data[rank_index];
+        &mut self.data[rank_index]
     }
 }
 
-impl TryFrom<MatrixAddress> for GenericTensorAddress<2> {
-    type Error = Error;
-
-    fn try_from(value: MatrixAddress) -> Result<Self, Self::Error> {
-        if value.x < 0 || value.y < 0 {
-            return Err(Error::AddressOutOfBounds(
-                "Cannot represent address with negative indices as a GenericTensorArray!"
-                    .to_owned(),
-            ));
-        }
-        return Ok(GenericTensorAddress {
-            data: [value.x as usize, value.y as usize],
-        });
-    }
-}
+// impl TryFrom<MatrixAddress> for GenericTensorAddress<2> {
+//     type Error = Error;
+//
+//     fn try_from(value: MatrixAddress) -> Result<Self, Self::Error> {
+//         if value.x < 0 || value.y < 0 {
+//             return Err(Error::AddressOutOfBounds(
+//                 "Cannot represent address with negative indices as a GenericTensorArray!"
+//                     .to_owned(),
+//             ));
+//         }
+//         Ok(GenericTensorAddress {
+//             data: [value.x as usize, value.y as usize],
+//         })
+//     }
+// }

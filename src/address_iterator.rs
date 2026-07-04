@@ -7,6 +7,7 @@ pub struct AddressIterator<V: AddressValue, A: Addressable<V, RANK>, const RANK:
     lower_bounds_inclusive: GenericTensorAddress<RANK, V>,
     upper_bounds_inclusive: GenericTensorAddress<RANK, V>,
     current_position: GenericTensorAddress<RANK, V>,
+    is_first_pass: bool,
     _marker: PhantomData<A>,
 }
 
@@ -28,12 +29,12 @@ impl<V: AddressValue, A: Addressable<V, RANK>, const RANK: usize> AddressIterato
         lower_bounds_inclusive: GenericTensorAddress<RANK, V>,
         upper_bounds_inclusive: GenericTensorAddress<RANK, V>,
     ) -> Self {
-        let mut lower_bounds_copy: GenericTensorAddress<RANK, V> = lower_bounds_inclusive;
-        lower_bounds_copy[0] = lower_bounds_copy[0] - 1.into();
+        let lower_bounds_copy: GenericTensorAddress<RANK, V> = lower_bounds_inclusive;
         Self {
             lower_bounds_inclusive,
             upper_bounds_inclusive,
             current_position: lower_bounds_copy,
+            is_first_pass: true,
             _marker: PhantomData,
         }
     }
@@ -64,6 +65,10 @@ impl<V: AddressValue, A: Addressable<V, RANK>, const RANK: usize> Iterator
     type Item = A;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.is_first_pass {
+            self.is_first_pass = false;
+            return Some(self.current_position.into());
+        }
         for dimension_index in 0..RANK {
             if self.current_position[dimension_index] < self.upper_bounds_inclusive[dimension_index]
             {
@@ -100,14 +105,16 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::address_iterator::AddressIterator;
+    use crate::generic_tensor_address::GenericTensorAddress;
     use crate::matrix::Matrix;
     use crate::matrix_address::MatrixAddress;
     use crate::tensor::Tensor;
 
     // Working address iterator from the previous version
     pub struct MatrixAddressIterator {
-        pub(crate) x: i32,
-        pub(crate) y: i32,
+        pub(crate) x: usize,
+        pub(crate) y: usize,
         pub(crate) width: usize,
         pub(crate) height: usize,
     }
@@ -115,8 +122,8 @@ mod tests {
         type Item = MatrixAddress;
 
         fn next(&mut self) -> Option<Self::Item> {
-            if self.x >= self.width as i32 - 1 {
-                if self.y >= self.height as i32 - 1 {
+            if self.x >= self.width - 1 {
+                if self.y >= self.height - 1 {
                     return None;
                 }
                 self.x = 0;
@@ -134,32 +141,38 @@ mod tests {
     #[test]
     fn address_iterator_test() {
         let (width, height) = (1000, 2000);
-        let matrix_address_iterator = MatrixAddressIterator {
-            x: -1,
+        let mut matrix_address_iterator = MatrixAddressIterator {
+            x: 0,
             y: 0,
             width,
             height,
         };
-        let matrix = Matrix::new(width, height, |_| 0).unwrap();
-        for (true_address, new_address) in matrix_address_iterator.zip(matrix.address_iter()) {
-            assert_eq!(true_address, new_address);
+        let mut address_iterator = AddressIterator::<usize, MatrixAddress, 2>::new(
+            GenericTensorAddress::new([0, 0]),
+            GenericTensorAddress::new([width - 1, height - 1]),
+        );
+        assert_eq!(address_iterator.next(), Some(MatrixAddress { x: 0, y: 0 }));
+        loop {
+            let a = matrix_address_iterator.next();
+            let b = address_iterator.next();
+            assert_eq!(a, b);
+            if a.is_none() {
+                break;
+            }
         }
     }
 
     #[test]
     fn address_value_iterator_test() {
         let (width, height) = (1000, 2000);
-        let matrix = Matrix::new(width, height, |address| {
-            address.y * width as i32 + address.x
-        })
-        .unwrap();
+        let matrix = Matrix::new(width, height, |address| address.y * width + address.x).unwrap();
         let address_iter = matrix.address_iter();
         let address_value_iter = matrix.address_value_iter();
         address_iter
             .zip(address_value_iter)
             .for_each(|(a1, (a2, value))| {
                 assert_eq!(a1, a2);
-                assert_eq!(*value, a2.y * width as i32 + a2.x);
+                assert_eq!(*value, a2.y * width + a2.x);
             })
     }
 
@@ -167,9 +180,9 @@ mod tests {
     fn transform_test() {
         let (width, height) = (1000, 1000);
         let matrix = Matrix::new(width, height, |_| 0u8).unwrap();
-        let matrix = matrix.transform(|address, _value| address.y * width as i32 + address.x);
+        let matrix = matrix.transform(|address, _value| address.y * width + address.x);
         matrix
             .address_value_iter()
-            .for_each(|(address, value)| assert_eq!(address.y * width as i32 + address.x, *value));
+            .for_each(|(address, value)| assert_eq!(address.y * width + address.x, *value));
     }
 }

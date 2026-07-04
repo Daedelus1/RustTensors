@@ -1,6 +1,6 @@
 use std::{
     fmt::Debug,
-    ops::{Add, Mul, Sub},
+    ops::{Add, Sub},
 };
 
 use crate::generic_tensor_address::GenericTensorAddress;
@@ -12,12 +12,17 @@ pub trait Addressable<V: AddressValue, const RANK: usize>:
 }
 
 pub trait AddressValue:
-    Copy + From<u8> + Add<Output = Self> + Sub<Output = Self> + PartialOrd + Debug + TryInto<usize>
+    Copy + From<usize> + Into<usize> + Add<Output = Self> + Sub<Output = Self> + PartialOrd + Debug
 {
 }
 
-impl<
-    T: Copy + From<u8> + Add<Output = Self> + Sub<Output = Self> + PartialOrd + Debug + TryInto<usize>,
-> AddressValue for T
+impl<T> AddressValue for T where
+    T: Copy
+        + From<usize>
+        + Into<usize>
+        + Add<Output = Self>
+        + Sub<Output = Self>
+        + PartialOrd
+        + Debug
 {
 }

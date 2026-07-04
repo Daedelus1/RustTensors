@@ -1,13 +1,10 @@
-use crate::{
-    adressable::Addressable, error::Error, generic_tensor::GenericTensor,
-    generic_tensor_address::GenericTensorAddress,
-};
-use std::ops::{Add, Neg, Sub};
+use crate::{adressable::Addressable, generic_tensor_address::GenericTensorAddress};
+use std::ops::{Add, Sub};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct MatrixAddress {
-    pub x: i32,
-    pub y: i32,
+    pub x: usize,
+    pub y: usize,
 }
 
 impl MatrixAddress {
@@ -35,14 +32,14 @@ impl MatrixAddress {
             y += f64::EPSILON;
         }
         MatrixAddress {
-            x: x as i32,
-            y: y as i32,
+            x: x as usize,
+            y: y as usize,
         }
     }
 }
 
-impl Addressable<i32, 2usize> for MatrixAddress {
-    fn get_value_at_rank(&self, index: usize) -> i32 {
+impl Addressable<usize, 2usize> for MatrixAddress {
+    fn get_value_at_rank(&self, index: usize) -> usize {
         match index {
             0 => self.x,
             1 => self.y,
@@ -51,8 +48,8 @@ impl Addressable<i32, 2usize> for MatrixAddress {
     }
 }
 
-impl From<GenericTensorAddress<2, i32>> for MatrixAddress {
-    fn from(value: GenericTensorAddress<2, i32>) -> Self {
+impl From<GenericTensorAddress<2, usize>> for MatrixAddress {
+    fn from(value: GenericTensorAddress<2, usize>) -> Self {
         Self {
             x: value[0],
             y: value[1],
@@ -60,7 +57,7 @@ impl From<GenericTensorAddress<2, i32>> for MatrixAddress {
     }
 }
 
-impl From<MatrixAddress> for GenericTensorAddress<2, i32> {
+impl From<MatrixAddress> for GenericTensorAddress<2, usize> {
     fn from(val: MatrixAddress) -> Self {
         GenericTensorAddress::new([val.x, val.y])
     }
@@ -88,26 +85,6 @@ impl Sub for MatrixAddress {
     }
 }
 
-impl Neg for MatrixAddress {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        MatrixAddress {
-            x: -self.x,
-            y: -self.y,
-        }
-    }
-}
-
-impl From<GenericTensorAddress<2>> for MatrixAddress {
-    fn from(value: GenericTensorAddress<2>) -> Self {
-        MatrixAddress {
-            x: value[0] as i32,
-            y: value[1] as i32,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::adressable::Addressable;
@@ -116,7 +93,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn arithmetic_test(x1 in -100000i32..100000i32, x2 in -100000i32..100000i32, y1 in -100000i32..100000i32, y2 in -100000i32..100000i32, s in -10000i32..10000i32) {
+        fn arithmetic_test(x1 in 0usize..100000usize, x2 in 0usize..100000usize, y1 in 0usize..100000usize, y2 in 0usize..100000usize, s in 0usize..10000usize) {
             let a1 = MatrixAddress{x: x1, y: y1};
             let a2 = MatrixAddress{x: x2, y: y2};
 
@@ -125,11 +102,7 @@ mod tests {
             assert_eq!(a2.get_value_at_rank(0), x2);
             assert_eq!(a2.get_value_at_rank(1), y2);
 
-            assert_eq!(a1 - a2, a1 + (-a2));
-            assert_eq!(a2 - a1, a2 + (-a1));
-            assert_eq!(-(-a1), a1);
             assert_eq!(a1 + a2 - a2, a1);
-            assert_eq!(-a1 + a2 + a1, a2);
             assert_eq!(a1.scale(2.0), MatrixAddress{x: a1.x * 2, y: a1.y * 2});
 
             let a1 = MatrixAddress{x: x1, y: y1};
